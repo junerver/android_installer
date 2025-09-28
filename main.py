@@ -63,7 +63,7 @@ class AndroidInstallerApp:
             # 标题文本
             self.title_label = ctk.CTkLabel(
                 self.title_frame, 
-                text="Android APK安装器",
+                text="Android APK安装器 by hwj",
                 font=ctk.CTkFont(size=12),
                 text_color="white"
             )
