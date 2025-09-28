@@ -9,7 +9,6 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
 import threading
 import time
-from typing import Optional
 
 from adb_utils import adb_manager, DeviceStatus
 
