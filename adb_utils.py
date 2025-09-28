@@ -5,8 +5,29 @@ ADB工具类模块
 
 import subprocess
 import os
+import logging
 from enum import Enum
 from typing import List, Optional, Tuple
+
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+STARTF_USESHOWWINDOW = getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
+STARTUPINFO = getattr(subprocess, "STARTUPINFO", None)
+DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS", 0)
+
+# 配置ADB模块专用日志
+adb_logger = logging.getLogger('adb_utils')
+adb_logger.setLevel(logging.INFO)
+
+# 创建文件处理器，日志输出到文件
+log_handler = logging.FileHandler('android_installer.log', encoding='utf-8')
+log_handler.setLevel(logging.INFO)
+
+# 设置日志格式
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_handler.setFormatter(formatter)
+
+# 添加处理器到logger
+adb_logger.addHandler(log_handler)
 
 
 class DeviceStatus(Enum):
@@ -22,7 +43,25 @@ class ADBManager:
     def __init__(self):
         self._cached_adb_path = None  # ADB路径缓存
         self.adb_path = self._find_adb_path()
-    
+
+    def _run_subprocess(self, cmd, **kwargs):
+        if os.name == "nt":
+            flags = kwargs.get("creationflags", 0)
+            if CREATE_NO_WINDOW:
+                flags |= CREATE_NO_WINDOW
+            if DETACHED_PROCESS:
+                flags |= DETACHED_PROCESS
+            kwargs["creationflags"] = flags
+            if STARTUPINFO and STARTF_USESHOWWINDOW:
+                startupinfo = kwargs.get("startupinfo")
+                if startupinfo is None:
+                    startupinfo = STARTUPINFO()
+                startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0
+                kwargs["startupinfo"] = startupinfo
+            kwargs.setdefault("stdin", subprocess.DEVNULL)
+        return subprocess.run(cmd, **kwargs)
+
     def _get_portable_adb_path(self) -> Optional[str]:
         """
         获取便携版ADB路径
@@ -49,10 +88,9 @@ class ADBManager:
             
         # 首先尝试从PATH环境变量中查找
         try:
-            result = subprocess.run(['where', 'adb'], 
+            result = self._run_subprocess(['where', 'adb'], 
                                   capture_output=True, 
-                                  text=True, 
-                                  shell=True)
+                                  text=True)
             if result.returncode == 0:
                 adb_path = result.stdout.strip().split('\n')[0]
                 self._cached_adb_path = adb_path
@@ -89,7 +127,7 @@ class ADBManager:
             return False
         
         try:
-            result = subprocess.run([self.adb_path, 'version'], 
+            result = self._run_subprocess([self.adb_path, 'version'], 
                                   capture_output=True, 
                                   text=True, 
                                   timeout=5)
@@ -118,7 +156,7 @@ class ADBManager:
             return DeviceStatus.ADB_ERROR, []
         
         try:
-            result = subprocess.run([self.adb_path, 'devices'], 
+            result = self._run_subprocess([self.adb_path, 'devices'], 
                                   capture_output=True, 
                                   text=True, 
                                   timeout=10)
@@ -169,7 +207,7 @@ class ADBManager:
                 cmd.extend(['-s', device_id])
             cmd.extend(['install', '-r', apk_path])  # -r 表示替换已存在的应用
             
-            result = subprocess.run(cmd, 
+            result = self._run_subprocess(cmd, 
                                   capture_output=True, 
                                   text=True, 
                                   timeout=60)  # 安装可能需要较长时间
