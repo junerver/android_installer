@@ -48,30 +48,72 @@ class AndroidInstallerApp:
         self.root.resizable(False, False)
         
         # 设置窗口背景为深色
-        self.root.configure(bg="#212121")  # 深色背景
+        self.root.configure(bg="#212121")
         
-        # 尝试设置窗口属性为深色主题（Windows 10/11）
+        # 尝试设置无边框窗口以获得完全的深色外观
         try:
-            # 导入Windows API相关模块
-            import ctypes
-            from ctypes import wintypes
+            # 设置窗口属性
+            self.root.overrideredirect(True)  # 移除标题栏
             
-            # 获取窗口句柄
-            hwnd = self.root.winfo_id()
+            # 创建自定义标题栏
+            self.title_frame = ctk.CTkFrame(self.root, height=30, fg_color="#2b2b2b")
+            self.title_frame.pack(fill="x", padx=0, pady=0)
+            self.title_frame.pack_propagate(False)
             
-            # 设置窗口为深色模式（Windows 10 1903+）
-            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-            set_window_attribute = ctypes.windll.dwmapi.DwmSetWindowAttribute
-            set_window_attribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, 
-                               ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int))
+            # 标题文本
+            self.title_label = ctk.CTkLabel(
+                self.title_frame, 
+                text="Android APK安装器",
+                font=ctk.CTkFont(size=12),
+                text_color="white"
+            )
+            self.title_label.pack(side="left", padx=10, pady=5)
+            
+            # 关闭按钮
+            self.close_button = ctk.CTkButton(
+                self.title_frame,
+                text="×",
+                width=30,
+                height=20,
+                font=ctk.CTkFont(size=16, weight="bold"),
+                fg_color="transparent",
+                hover_color="#ff4444",
+                command=self.on_closing
+            )
+            self.close_button.pack(side="right", padx=5, pady=5)
+            
+            # 使标题栏可拖拽
+            self.title_frame.bind("<Button-1>", self.start_move)
+            self.title_frame.bind("<B1-Motion>", self.do_move)
+            self.title_label.bind("<Button-1>", self.start_move)
+            self.title_label.bind("<B1-Motion>", self.do_move)
+            
         except Exception as e:
-            print(f"无法设置深色窗口主题: {e}")
+            print(f"创建自定义标题栏失败，使用默认窗口: {e}")
+            self.root.overrideredirect(False)
         
         # 窗口居中
         self.center_window()
         
         # 设置窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def start_move(self, event):
+        """开始拖拽窗口"""
+        self.x = event.x
+        self.y = event.y
+    
+    def do_move(self, event):
+        """拖拽窗口"""
+        deltax = event.x - self.x
+        deltay = event.y - self.y
+        x = self.root.winfo_x() + deltax
+        y = self.root.winfo_y() + deltay
+        self.root.geometry(f"+{x}+{y}")
+    
+    def _apply_dark_theme(self):
+        """应用深色主题到窗口标题栏（现在不需要了，因为使用自定义标题栏）"""
+        pass
     
     def center_window(self):
         """将窗口居中显示"""
@@ -84,9 +126,9 @@ class AndroidInstallerApp:
     
     def setup_ui(self):
         """设置用户界面"""
-        # 创建主框架
+        # 创建主框架（调整上边距以适应自定义标题栏）
         self.main_frame = ctk.CTkFrame(self.root)
-        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=(10, 20))
         
         # 创建提示标签
         self.status_label = ctk.CTkLabel(
