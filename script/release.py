@@ -220,6 +220,9 @@ class AndroidInstallerReleaser:
         # 生成版本信息文件
         version_file_path = self._create_version_file()
 
+        data_sep = ";" if os.name == "nt" else ":"
+        icon_data_arg = f"{self.icon_path}{data_sep}assets"
+
         # PyInstaller命令参数
         pyinstaller_args = [
             "pyinstaller",
@@ -234,6 +237,7 @@ class AndroidInstallerReleaser:
             "--hidden-import", "win32con",  # 添加win32con模块
             "--version-file", str(version_file_path),  # 注入版本信息
             "--icon", str(self.icon_path),  # 应用图标
+            "--add-data", icon_data_arg,  # 拷贝图标资源
             str(self.main_script)  # 主脚本路径
         ]
         
@@ -275,6 +279,15 @@ class AndroidInstallerReleaser:
         shutil.copytree(self.platform_tools_dir, target_platform_tools)
         
         logger.info(f"Platform-tools拷贝完成: {target_platform_tools}")
+
+    def copy_runtime_icon(self):
+        """拷贝应用图标到dist根目录，便于便携包使用"""
+        logger.info("拷贝应用图标到dist目录...")
+
+        target_icon = self.dist_dir / "icon.ico"
+        shutil.copy2(self.icon_path, target_icon)
+
+        logger.info(f"图标拷贝完成: {target_icon}")
     
     def create_zip_package(self):
         """创建zip便携包"""
@@ -322,6 +335,10 @@ class AndroidInstallerReleaser:
         adb_path = platform_tools_path / "adb.exe"
         if not adb_path.exists():
             raise FileNotFoundError(f"ADB可执行文件未找到: {adb_path}")
+
+        icon_runtime_path = self.dist_dir / "icon.ico"
+        if not icon_runtime_path.exists():
+            raise FileNotFoundError(f"运行时图标未找到: {icon_runtime_path}")
         
         # 检查zip文件
         zip_path = self.project_root / self.zip_name
@@ -355,11 +372,14 @@ class AndroidInstallerReleaser:
             
             # 4. 拷贝platform-tools
             self.copy_platform_tools()
+
+            # 5. 拷贝运行时图标
+            self.copy_runtime_icon()
             
-            # 5. 创建zip包
+            # 6. 创建zip包
             self.create_zip_package()
             
-            # 6. 校验产物
+            # 7. 校验产物
             self.verify_build()
             
             logger.info("=" * 50)

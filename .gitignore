@@ -12,3 +12,4 @@ wheels/
 *.log
 *.zip
 .idea
+*.spec

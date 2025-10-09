@@ -16,11 +16,34 @@ from pathlib import Path
 
 from adb_utils import adb_manager, DeviceStatus
 
+
+def resolve_assets_dir() -> Path:
+    """解析资源目录（兼容PyInstaller运行环境）"""
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "assets"
+    return Path(__file__).resolve().parent.parent / "assets"
+
+
+def resolve_icon_path(assets_dir: Path) -> Path:
+    """解析图标路径，优先使用当前目录以适配便携版"""
+    candidate_paths = [
+        Path.cwd() / "icon.ico",
+        assets_dir / "icon.ico",
+    ]
+
+    for path in candidate_paths:
+        if path.exists():
+            return path
+
+    # 默认返回当前目录下的路径，确保后续构建流程可落到 dist 根目录
+    return candidate_paths[0]
+
+
 CONNECTED_BG = "#E8F5E8" # 连接状态背景颜色
 DISCONNECTED_BG = "#FFE8E8" # 未连接状态背景颜色
 APP_TITLE = "Android APK安装器 by hwj"
-ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-ICON_PATH = ASSETS_DIR / "icon.ico"
+ASSETS_DIR = resolve_assets_dir()
+ICON_PATH = resolve_icon_path(ASSETS_DIR) # 同时兼容调试运行与打包便携
 
 class AndroidInstallerApp:
     """Android APK安装器主应用类"""
