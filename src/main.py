@@ -12,12 +12,15 @@ import time
 import sys
 import ctypes
 from ctypes import wintypes
+from pathlib import Path
 
 from adb_utils import adb_manager, DeviceStatus
 
 CONNECTED_BG = "#E8F5E8" # 连接状态背景颜色
 DISCONNECTED_BG = "#FFE8E8" # 未连接状态背景颜色
 APP_TITLE = "Android APK安装器 by hwj"
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+ICON_PATH = ASSETS_DIR / "icon.ico"
 
 class AndroidInstallerApp:
     """Android APK安装器主应用类"""
@@ -53,6 +56,13 @@ class AndroidInstallerApp:
         # 设置窗口背景为深色
         self.root.configure(bg="#212121")
         self.root.overrideredirect(False)
+
+        # 设置窗口图标
+        if ICON_PATH.exists():
+            try:
+                self.root.iconbitmap(default=str(ICON_PATH))
+            except Exception:
+                pass
 
         # 强制标题栏为深色（Windows专用）
         if sys.platform == "win32":

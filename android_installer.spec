@@ -32,7 +32,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version='C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tmpjz0kncdd.txt',
+    version='C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tmpezmvinac.txt',
+    icon=['E:\\GitHub\\android_installer\\assets\\icon.ico'],
 )
 coll = COLLECT(
     exe,

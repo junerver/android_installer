@@ -41,6 +41,7 @@ class AndroidInstallerReleaser:
         self.src_dir = self.project_root / "src"
         self.main_script = self.src_dir / "main.py"
         self.platform_tools_dir = self.project_root / "assets" / "platform-tools"
+        self.icon_path = self.project_root / "assets" / "icon.ico"
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
@@ -64,6 +65,7 @@ class AndroidInstallerReleaser:
         logger.info(f"项目名称: {self.project_name}")
         logger.info(f"项目版本: {self.project_version}")
         logger.info(f"作者: {self.project_author}")
+        logger.info(f"应用图标: {self.icon_path}")
 
     def _load_project_metadata(self) -> dict:
         """读取pyproject.toml中的项目信息"""
@@ -212,6 +214,9 @@ class AndroidInstallerReleaser:
         # 添加pywin32依赖到隐藏导入
         hidden_imports = ["win32gui", "win32con"]
 
+        if not self.icon_path.exists():
+            raise FileNotFoundError(f"应用图标不存在: {self.icon_path}")
+
         # 生成版本信息文件
         version_file_path = self._create_version_file()
 
@@ -228,6 +233,7 @@ class AndroidInstallerReleaser:
             "--hidden-import", "win32gui",  # 添加win32gui模块
             "--hidden-import", "win32con",  # 添加win32con模块
             "--version-file", str(version_file_path),  # 注入版本信息
+            "--icon", str(self.icon_path),  # 应用图标
             str(self.main_script)  # 主脚本路径
         ]
         
