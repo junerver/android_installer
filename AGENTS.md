@@ -1,16 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-The GUI entry point lives in `main.py`, orchestrating device polling, drag-and-drop installation, and UI state management. ADB interactions are isolated in `adb_utils.py`, which resolves a portable `adb.exe`, wraps device status checks, and writes to `android_installer.log`. Packaging automation sits in `release.py`, copying `platform-tools/` and assembling the PyInstaller bundle. Generated artifacts land in `build/` and `dist/`; keep them out of version control. The bundled Android SDK tools remain under `platform-tools/`, so adjustments to the binary set should happen there.
+`main.py` is the GUI entry point, coordinating device polling, drag-and-drop APK installs, and UI state. `adb_utils.py` isolates all ADB calls, resolves the bundled `platform-tools/adb.exe`, and logs to `android_installer.log`. Packaging logic lives in `release.py`, which stages `platform-tools/` and creates PyInstaller bundles inside `dist/`. Treat `build/` and `dist/` as disposable artifacts, and reserve a future `tests/` package for automated coverage if added.
 
 ## Build, Test, and Development Commands
-Use `uv` for environment management: `uv sync` installs dependencies declared in `pyproject.toml`. Launch the desktop app with `uv run python main.py`, which spawns the CustomTkinter GUI. For a distributable build, run `uv run python release.py`; the resulting `android_installer.zip` and extracted executable appear in `dist/`. When debugging ADB connectivity, `uv run python -m adb_utils` is not provided; invoke `platform-tools/adb.exe devices` directly to verify device visibility.
+- `uv sync` - install dependencies declared in `pyproject.toml` into the managed virtual environment.
+- `uv run python main.py` - launch the CustomTkinter desktop app and verify device status updates.
+- `uv run python release.py` - assemble the distributable bundle and emit `dist/android_installer.zip` plus the extracted executable.
+- `platform-tools/adb.exe devices` - confirm Windows recognizes connected Android hardware before attempting an install.
 
 ## Coding Style & Naming Conventions
-Follow standard Python 3.13 style: four-space indentation, snake_case for functions and modules, PascalCase for classes, and UPPER_CASE for constants like `DeviceStatus`. Keep UI copy and comments in UTF-8; existing strings are Chinese, so maintain locale consistency unless product direction changes. Prefer explicit logging via the shared `android_installer.log` handler instead of `print`. Structure new helpers near related logic and include docstrings when behavior is non-obvious.
+Follow Python 3.13 conventions: four-space indenting, snake_case functions/modules, PascalCase classes, and UPPER_CASE constants such as `DeviceStatus`. Keep UI strings and comments in Chinese UTF-8 to match existing copy. Prefer structured logging through the module-level logger that writes to `android_installer.log`; avoid stray `print` calls. Co-locate helpers near related logic and include concise docstrings when intent is not obvious.
 
 ## Testing Guidelines
-Automated tests are not yet defined; prioritize manual verification. Before opening a pull request, confirm `uv run python main.py` detects devices, toggles status colors, and installs a sample APK without freezing the UI. Capture log excerpts from `android_installer.log` for regressions. If you introduce unit tests, place them under a new `tests/` package and name files `test_<module>.py` to align with pytest conventions anticipated here.
+Automated suites are not yet defined, so prioritize manual verification. Exercise the full install loop with `uv run python main.py`, confirming the device list refreshes, status colors toggle, and sample APK installs without blocking the UI thread. Capture relevant excerpts from `android_installer.log` when reporting regressions. If you introduce tests, place them under `tests/test_<module>.py` and wire them into `uv run python -m pytest`.
 
 ## Commit & Pull Request Guidelines
-Commits follow Conventional Commits (e.g., `feat:`, `refactor:`, `chore:`) as seen in history, so continue that format and keep messages in English or Chinese consistently. Each pull request should summarize the change, note manual test steps, and attach screenshots or screen recordings when UI updates occur. Link related issues and call out any required ADB or platform-tool changes so reviewers can validate on their machines.
+Use Conventional Commits (e.g., `feat:`, `fix:`, `chore:`) in English or Chinese consistently. PR descriptions should summarize the change, list manual test steps, and attach screenshots or recordings for UI tweaks. Link related issues and flag any required changes to `platform-tools/` so reviewers can replicate your environment. Keep generated archives and executables out of version control.
+
+## Security & Configuration Tips
+Avoid modifying or replacing `platform-tools/` binaries unless explicitly coordinated, since the app relies on that portable SDK. Store sensitive device logs outside the repository when sharing builds, and rotate temporary APKs after testing to keep the workspace clean.
