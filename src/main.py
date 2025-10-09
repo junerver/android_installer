@@ -14,6 +14,7 @@ from adb_utils import adb_manager, DeviceStatus
 
 CONNECTED_BG = "#E8F5E8" # 连接状态背景颜色
 DISCONNECTED_BG = "#FFE8E8" # 未连接状态背景颜色
+APP_TITLE = "Android APK安装器 by hwj"
 
 class AndroidInstallerApp:
     """Android APK安装器主应用类"""
@@ -42,15 +43,16 @@ class AndroidInstallerApp:
     
     def setup_window(self):
         """设置窗口属性"""
-        self.root.title("Android APK安装器")
+        self.root.title(APP_TITLE)
         self.root.geometry("400x200")
         self.root.resizable(False, False)
         
         # 设置窗口背景为深色
         self.root.configure(bg="#212121")
         
-        # 尝试设置无边框窗口以获得完全的深色外观
-        try:
+        # 设置为Ture则尝试设置无边框窗口以获得完全的深色外观，设置为False时使用默认窗口
+        use_custom_titlebar = False
+        if use_custom_titlebar:
             # 设置窗口属性
             self.root.overrideredirect(True)  # 移除标题栏
             
@@ -62,7 +64,7 @@ class AndroidInstallerApp:
             # 标题文本
             self.title_label = ctk.CTkLabel(
                 self.title_frame, 
-                text="Android APK安装器 by hwj",
+                text=APP_TITLE,
                 font=ctk.CTkFont(size=12),
                 text_color="white"
             )
@@ -87,8 +89,8 @@ class AndroidInstallerApp:
             self.title_label.bind("<Button-1>", self.start_move)
             self.title_label.bind("<B1-Motion>", self.do_move)
             
-        except Exception as e:
-            print(f"创建自定义标题栏失败，使用默认窗口: {e}")
+        else:
+            print("使用默认窗口")
             self.root.overrideredirect(False)
         
         # 窗口居中
