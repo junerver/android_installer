@@ -32,6 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\tmpjz0kncdd.txt',
 )
 coll = COLLECT(
     exe,

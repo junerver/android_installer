@@ -1,15 +1,10 @@
 [project]
-name = "android-installer"
+name = "android_installer"
 version = "0.1.0"
-description = "Add your description here"
+description = "Android APK Installer"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "customtkinter>=5.2.2",
-    "tkinterdnd2>=0.3.0",
-]
+dependencies = ["customtkinter>=5.2.2", "tkinterdnd2>=0.3.0"]
 
 [dependency-groups]
-dev = [
-    "pyinstaller>=6.16.0",
-]
+dev = ["pyinstaller>=6.16.0"]
