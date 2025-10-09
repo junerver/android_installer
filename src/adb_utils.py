@@ -237,6 +237,67 @@ class ADBManager:
         status, devices = self.get_connected_devices()
         return status
 
+    def get_device_name(self, device_id: Optional[str] = None) -> Optional[str]:
+        """
+        获取设备的人类可读名称（优先返回品牌+型号）
+        
+        Args:
+            device_id: 设备ID（可选）。未提供时将取当前连接的第一个设备。
+        
+        Returns:
+            Optional[str]: 设备名称；若无法获取则返回设备ID；无设备时返回None。
+        """
+        if not self.is_adb_available():
+            return None
+
+        status, devices = self.get_connected_devices()
+        if status != DeviceStatus.CONNECTED or not devices:
+            return None
+
+        target_id = device_id or devices[0]
+
+        try:
+            # 获取型号
+            model_res = self._run_subprocess(
+                [self.adb_path, '-s', target_id, 'shell', 'getprop', 'ro.product.model'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            model = model_res.stdout.strip() if model_res.returncode == 0 else ""
+
+            # 获取品牌
+            brand_res = self._run_subprocess(
+                [self.adb_path, '-s', target_id, 'shell', 'getprop', 'ro.product.brand'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            brand = brand_res.stdout.strip() if brand_res.returncode == 0 else ""
+
+            if model:
+                if brand and brand.lower() not in model.lower():
+                    return f"{brand} {model}".strip()
+                return model
+
+            # 回退到其他属性
+            for prop in ['ro.product.name', 'ro.product.device']:
+                res = self._run_subprocess(
+                    [self.adb_path, '-s', target_id, 'shell', 'getprop', prop],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                val = res.stdout.strip()
+                if res.returncode == 0 and val:
+                    return val
+
+            # 最后回退为设备ID
+            return target_id
+        except Exception:
+            # 异常时回退为设备ID
+            return target_id
+
 
 # 全局ADB管理器实例
 adb_manager = ADBManager()

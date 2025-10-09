@@ -184,7 +184,17 @@ class AndroidInstallerApp:
         if self.current_status == DeviceStatus.CONNECTED:
             # 浅绿色背景
             self.main_frame.configure(fg_color=CONNECTED_BG)
-            self.device_status_label.configure(text="设备已连接", text_color="green")
+            # 获取设备名称并显示
+            try:
+                status, devices = adb_manager.get_connected_devices()
+                device_name = None
+                if status == DeviceStatus.CONNECTED and devices:
+                    # 使用第一个设备名称
+                    device_name = adb_manager.get_device_name(devices[0])
+                display_name = device_name or "未知设备"
+                self.device_status_label.configure(text=f"设备已连接：{display_name}", text_color="green")
+            except Exception:
+                self.device_status_label.configure(text="设备已连接：未知设备", text_color="green")
         elif self.current_status == DeviceStatus.ADB_ERROR:
             # 浅红色背景
             self.main_frame.configure(fg_color=DISCONNECTED_BG)
