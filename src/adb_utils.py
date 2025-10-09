@@ -6,8 +6,14 @@ ADB工具类模块
 import subprocess
 import os
 import logging
+from pathlib import Path
 from enum import Enum
 from typing import List, Optional, Tuple
+
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+LOG_PATH = PROJECT_ROOT / "android_installer.log"
+PLATFORM_TOOLS_DIR = PROJECT_ROOT / "platform-tools"
 
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 STARTF_USESHOWWINDOW = getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
@@ -19,7 +25,7 @@ adb_logger = logging.getLogger('adb_utils')
 adb_logger.setLevel(logging.INFO)
 
 # 创建文件处理器，日志输出到文件
-log_handler = logging.FileHandler('android_installer.log', encoding='utf-8')
+log_handler = logging.FileHandler(LOG_PATH, encoding='utf-8')
 log_handler.setLevel(logging.INFO)
 
 # 设置日志格式
@@ -69,14 +75,12 @@ class ADBManager:
         Returns:
             Optional[str]: 便携版ADB路径，如果不存在则返回None
         """
-        # 获取当前脚本所在目录
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # 便携版ADB路径
-        portable_adb_path = os.path.join(current_dir, "platform-tools", "adb.exe")
+
+        # 便携ADB路径（仓库根目录）
+        portable_adb_path = PLATFORM_TOOLS_DIR / "adb.exe"
         
         if os.path.exists(portable_adb_path):
-            return portable_adb_path
+            return str(portable_adb_path)
         
         return None
     

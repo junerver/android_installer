@@ -1,27 +1,24 @@
 # Android APK安装器
 
-一个基于Python和customtkinter的桌面GUI应用程序，用于通过拖拽方式安装APK文件到Android设备。
+一个基于 Python 与 CustomTkinter 的轻量桌面应用，支持通过拖拽方式将 APK 安装到已连接的 Android 设备。
 
-## 功能特性
+## 主要特性
 
-- 🔍 **自动设备检测**: 自动检测通过ADB连接的Android设备
-- 🎨 **状态指示**: 通过背景色直观显示设备连接状态
-  - 无背景色：未连接设备
-  - 浅绿色：设备正常连接
-  - 浅红色：ADB调用失败
-- 📱 **拖拽安装**: 支持将APK文件拖拽到窗体进行安装
-- ✅ **文件验证**: 自动验证拖拽的文件是否为有效APK
-- 🔄 **异步处理**: 安装过程不会阻塞用户界面
+- 🤖 **设备自动检测**：实时轮询 ADB，自动识别已连接的 Android 设备。
+- 🌈 **状态指示**：颜色和提示文案同步展示连接、断开或 ADB 异常等状态。
+- 📦 **拖拽安装**：拖入 APK 即可开始安装，过程自动校验文件扩展名。
+- 🔄 **异步处理**：安装流程运行在后台线程，避免阻塞界面。
+- 🧾 **集中日志**：操作日志统一写入仓库根目录的 `android_installer.log`，便于排查问题。
 
 ## 系统要求
 
+- Windows 10/11
 - Python 3.13+
-- Android SDK (包含ADB工具)
-- Windows操作系统
+- 已正确配置或使用便携版的 Android SDK / ADB
 
-## 安装和运行
+## 安装与运行
 
-1. 克隆项目到本地：
+1. 克隆仓库：
 ```bash
 git clone <repository-url>
 cd android_installer
@@ -32,63 +29,74 @@ cd android_installer
 uv sync
 ```
 
-3. 运行应用：
+3. 启动桌面应用：
 ```bash
-uv run python main.py
+uv run python src/main.py
 ```
 
-## 使用方法
+## 构建发行包
 
-1. **连接Android设备**：
-   - 确保Android设备已开启USB调试
-   - 通过USB连接设备到电脑
-   - 应用会自动检测设备连接状态
+使用 PyInstaller 生成可分发的压缩包和可执行文件：
+```bash
+uv run python script/release.py
+```
+打包结果位于 `dist/` 目录，其中包含 `android_installer.zip` 与展开后的可执行产物。
 
-2. **安装APK**：
-   - 将APK文件拖拽到应用窗体
-   - 应用会自动验证文件并开始安装
-   - 安装完成后会显示结果提示
+## 使用说明
+
+1. **连接设备**：
+   - 启用 Android 设备的 USB 调试。
+   - 通过 USB 连接到电脑，并在设备端确认调试授权。
+   - 应用会自动刷新设备状态。
+
+2. **安装 APK**：
+   - 将 APK 文件拖入窗口中央区域。
+   - 应用在后台校验文件并调用 ADB 进行安装。
+   - 安装成功或失败会通过弹窗与状态栏提示。
 
 ## 项目结构
 
 ```
 android_installer/
-├── main.py              # 主应用程序
-├── adb_utils.py         # ADB工具类
-├── pyproject.toml       # 项目配置和依赖
-├── uv.lock             # 依赖锁定文件
-├── README.md           # 项目说明
-└── 开发计划.md          # 开发计划文档
+├── src/                 # 应用源码与 ADB 辅助工具
+│   ├── __init__.py
+│   ├── main.py          # GUI 入口
+│   └── adb_utils.py     # ADB 交互与日志
+├── script/              # 自动化脚本
+│   └── release.py       # PyInstaller 打包脚本
+├── platform-tools/      # 随仓库分发的便携版 ADB 工具
+├── build/               # PyInstaller 中间产物（忽略）
+├── dist/                # 构建结果（忽略）
+├── pyproject.toml       # 项目依赖与元数据
+├── uv.lock              # 依赖锁定文件
+├── README.md            # 使用说明
+└── AGENTS.md            # 贡献者指南
 ```
 
 ## 技术栈
 
-- **GUI框架**: customtkinter - 现代化的tkinter主题
-- **拖拽支持**: tkinterdnd2 - 文件拖拽功能
-- **包管理**: uv - 快速的Python包管理器
-- **设备通信**: ADB (Android Debug Bridge)
+- **GUI 框架**：CustomTkinter
+- **拖拽能力**：tkinterdnd2
+- **依赖管理**：uv
+- **设备通信**：Android Debug Bridge (ADB)
+- **打包工具**：PyInstaller
 
-## 故障排除
+## 常见问题
 
-### ADB调用失败
-- 确保Android SDK已正确安装
-- 检查ADB是否在系统PATH中
-- 尝试手动运行 `adb devices` 命令
+### 无法识别设备
+- 确认 USB 调试已开启并授权。
+- 使用 `platform-tools/adb.exe devices` 检查是否能看到设备。
+- 更换数据线或 USB 接口后重试。
 
-### 设备未检测到
-- 确认USB调试已开启
-- 检查USB连接线是否正常
-- 在设备上确认调试授权
+### ADB 报错或安装失败
+- 检查 `android_installer.log` 获取详细错误信息。
+- 确保设备存储空间充足，APK 未损坏。
+- 如需使用系统级 ADB，请将其路径加入 `PATH`。
 
-### APK安装失败
-- 确认APK文件完整且未损坏
-- 检查设备存储空间是否充足
-- 确认应用权限设置
-
-## 开发
-
-如需修改或扩展功能，请参考 `开发计划.md` 文件了解项目架构和实现细节。
+### 窗口无响应
+- 应用安装流程在后台运行，如安装时间过长请查看日志确认是否完成。
+- 避免在安装过程中重复拖入多个 APK。
 
 ## 许可证
 
-本项目采用MIT许可证。
+本项目采用 MIT License，详见仓库根目录的 `LICENSE`（若存在）。

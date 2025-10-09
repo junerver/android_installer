@@ -27,10 +27,11 @@ class AndroidInstallerReleaser:
     
     def __init__(self):
         # 项目根目录
-        self.project_root = Path(__file__).parent.absolute()
+        self.project_root = Path(__file__).resolve().parent.parent
         
         # 关键路径
-        self.main_script = self.project_root / "main.py"
+        self.src_dir = self.project_root / "src"
+        self.main_script = self.src_dir / "main.py"
         self.platform_tools_dir = self.project_root / "platform-tools"
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
@@ -40,6 +41,7 @@ class AndroidInstallerReleaser:
         self.zip_name = "android_installer.zip"
         
         logger.info(f"项目根目录: {self.project_root}")
+        logger.info(f"源码目录: {self.src_dir}")
         logger.info(f"主脚本: {self.main_script}")
         logger.info(f"Platform-tools目录: {self.platform_tools_dir}")
     
@@ -101,14 +103,15 @@ class AndroidInstallerReleaser:
         # PyInstaller命令参数
         pyinstaller_args = [
             "pyinstaller",
-            "--onedir",  # 打包为目录而不是单个文件
+            "--onedir",  # 生成目录而不是单文件
             "--windowed",  # 无控制台窗口
             "--name", self.exe_name.replace('.exe', ''),  # 输出文件名
             "--distpath", str(self.dist_dir),  # 输出目录
             "--workpath", str(self.build_dir),  # 工作目录
             "--clean",  # 清理临时文件
-            "--hidden-import", "win32gui",  # 添加win32gui依赖
-            "--hidden-import", "win32con",  # 添加win32con依赖
+            "--paths", str(self.src_dir),  # 确保src目录在模块查找路径
+            "--hidden-import", "win32gui",  # 添加win32gui模块
+            "--hidden-import", "win32con",  # 添加win32con模块
             str(self.main_script)  # 主脚本路径
         ]
         

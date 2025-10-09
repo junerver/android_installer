@@ -2,8 +2,8 @@
 
 
 a = Analysis(
-    ['E:\\GitHub\\android_installer\\main.py'],
-    pathex=[],
+    ['E:\\GitHub\\android_installer\\src\\main.py'],
+    pathex=['E:\\GitHub\\android_installer\\src'],
     binaries=[],
     datas=[],
     hiddenimports=['win32gui', 'win32con'],
