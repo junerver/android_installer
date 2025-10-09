@@ -40,7 +40,7 @@ uv run python src/main.py
 ```bash
 uv run python script/release.py
 ```
-打包结果位于 `dist/` 目录，其中包含 `android_installer.zip` 与展开后的可执行产物。
+打包结果位于 `dist/` 目录，同时压缩为 `android_installer.zip`（在项目根目录），包含可执行文件与必要的 ADB 工具。
 
 ## 使用说明
 
