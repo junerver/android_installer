@@ -9,6 +9,9 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
 import threading
 import time
+import sys
+import ctypes
+from ctypes import wintypes
 
 from adb_utils import adb_manager, DeviceStatus
 
@@ -50,6 +53,11 @@ class AndroidInstallerApp:
         # 设置窗口背景为深色
         self.root.configure(bg="#212121")
         self.root.overrideredirect(False)
+
+        # 强制标题栏为深色（Windows专用）
+        if sys.platform == "win32":
+            self.root.after(0, self._apply_dark_theme)
+            self.root.bind("<Map>", lambda _: self._apply_dark_theme(), add="+")
         
         # 窗口居中
         self.center_window()
@@ -71,8 +79,83 @@ class AndroidInstallerApp:
         self.root.geometry(f"+{x}+{y}")
     
     def _apply_dark_theme(self):
-        """应用深色主题到窗口标题栏（现在不需要了，因为使用自定义标题栏）"""
-        pass
+        """应用深色标题栏（仅Windows有效）"""
+        if sys.platform != "win32":
+            return
+
+        self.root.update_idletasks()
+
+        try:
+            user32 = ctypes.windll.user32
+            dwmapi = ctypes.windll.dwmapi
+        except AttributeError:
+            return
+
+        hwnd = self.root.winfo_id()
+        if not hwnd:
+            return
+
+        # 获取包含标题栏的顶层窗口
+        user32.GetAncestor.restype = wintypes.HWND
+        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+        GA_ROOT = 2
+        top_hwnd = user32.GetAncestor(wintypes.HWND(hwnd), GA_ROOT)
+        if top_hwnd:
+            hwnd = top_hwnd
+
+        attr_ids = (20, 19)  # Windows 10 20H1及以上优先，回退到1809常量
+        enable = ctypes.c_int(1)
+
+        dwmapi = ctypes.WinDLL("dwmapi")
+        for attr in attr_ids:
+            if dwmapi.DwmSetWindowAttribute(
+                ctypes.c_void_p(hwnd),
+                ctypes.c_uint(attr),
+                ctypes.byref(enable),
+                ctypes.sizeof(enable),
+            ) == 0:
+                break
+        else:
+            # 所有属性设置失败，退出
+            return
+
+        # 设置标题栏颜色和文字颜色，确保呈现深色效果
+        caption_color = ctypes.c_int(0x00212121)  # 深灰色
+        dwmapi.DwmSetWindowAttribute(
+            ctypes.c_void_p(hwnd),
+            ctypes.c_uint(35),  # DWMWA_CAPTION_COLOR
+            ctypes.byref(caption_color),
+            ctypes.sizeof(caption_color),
+        )
+
+        text_color = ctypes.c_int(0x00FFFFFF)  # 白色文字
+        dwmapi.DwmSetWindowAttribute(
+            ctypes.c_void_p(hwnd),
+            ctypes.c_uint(36),  # DWMWA_TEXT_COLOR
+            ctypes.byref(text_color),
+            ctypes.sizeof(text_color),
+        )
+
+        # 尝试使用Win11新的系统背景样式获得更暗的标题栏
+        try:
+            backdrop_type = ctypes.c_int(2)  # DWMSBT_MAINWINDOW = 2
+            dwmapi.DwmSetWindowAttribute(
+                ctypes.c_void_p(hwnd),
+                ctypes.c_uint(38),  # DWMWA_SYSTEMBACKDROP_TYPE
+                ctypes.byref(backdrop_type),
+                ctypes.sizeof(backdrop_type),
+            )
+        except Exception:
+            pass
+
+        # 应用深色主题到窗口（Explorer风格）
+        try:
+            set_window_theme = ctypes.windll.uxtheme.SetWindowTheme
+            set_window_theme.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR]
+            set_window_theme.restype = ctypes.HRESULT
+            set_window_theme(wintypes.HWND(hwnd), "DarkMode_Explorer", None)
+        except Exception:
+            pass
     
     def center_window(self):
         """将窗口居中显示"""
