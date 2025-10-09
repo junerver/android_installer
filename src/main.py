@@ -49,49 +49,7 @@ class AndroidInstallerApp:
         
         # 设置窗口背景为深色
         self.root.configure(bg="#212121")
-        
-        # 设置为Ture则尝试设置无边框窗口以获得完全的深色外观，设置为False时使用默认窗口
-        use_custom_titlebar = False
-        if use_custom_titlebar:
-            # 设置窗口属性
-            self.root.overrideredirect(True)  # 移除标题栏
-            
-            # 创建自定义标题栏
-            self.title_frame = ctk.CTkFrame(self.root, height=30, fg_color="#2b2b2b")
-            self.title_frame.pack(fill="x", padx=0, pady=0)
-            self.title_frame.pack_propagate(False)
-            
-            # 标题文本
-            self.title_label = ctk.CTkLabel(
-                self.title_frame, 
-                text=APP_TITLE,
-                font=ctk.CTkFont(size=12),
-                text_color="white"
-            )
-            self.title_label.pack(side="left", padx=10, pady=5)
-            
-            # 关闭按钮
-            self.close_button = ctk.CTkButton(
-                self.title_frame,
-                text="×",
-                width=30,
-                height=20,
-                font=ctk.CTkFont(size=16, weight="bold"),
-                fg_color="transparent",
-                hover_color="#ff4444",
-                command=self.on_closing
-            )
-            self.close_button.pack(side="right", padx=5, pady=5)
-            
-            # 使标题栏可拖拽
-            self.title_frame.bind("<Button-1>", self.start_move)
-            self.title_frame.bind("<B1-Motion>", self.do_move)
-            self.title_label.bind("<Button-1>", self.start_move)
-            self.title_label.bind("<B1-Motion>", self.do_move)
-            
-        else:
-            print("使用默认窗口")
-            self.root.overrideredirect(False)
+        self.root.overrideredirect(False)
         
         # 窗口居中
         self.center_window()
