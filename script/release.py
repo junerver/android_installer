@@ -32,7 +32,7 @@ class AndroidInstallerReleaser:
         # 关键路径
         self.src_dir = self.project_root / "src"
         self.main_script = self.src_dir / "main.py"
-        self.platform_tools_dir = self.project_root / "platform-tools"
+        self.platform_tools_dir = self.project_root / "assets" / "platform-tools"
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
         
