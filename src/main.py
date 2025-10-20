@@ -11,6 +11,7 @@ import threading
 import time
 import sys
 import ctypes
+import queue
 from ctypes import wintypes
 from pathlib import Path
 
@@ -60,13 +61,18 @@ class AndroidInstallerApp:
         # 状态变量
         self.current_status = DeviceStatus.DISCONNECTED
         self.status_check_running = True
-        
+        self.install_worker_running = True
+        self.install_queue = queue.Queue()
+
         # 创建UI组件
         self.setup_ui()
-        
+
         # 配置拖拽功能
         self.setup_drag_drop()
-        
+
+        # 启动安装任务队列
+        self.start_install_worker()
+
         # 启动状态检测线程
         self.start_status_monitoring()
     
@@ -228,10 +234,70 @@ class AndroidInstallerApp:
         # 为主窗口和框架都注册拖拽事件
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_file_drop)
-        
+
         # 为主框架也注册拖拽事件
         self.main_frame.drop_target_register(DND_FILES)
         self.main_frame.dnd_bind('<<Drop>>', self.on_file_drop)
+
+    def start_install_worker(self):
+        """启动安装任务队列线程"""
+        self.install_worker_thread = threading.Thread(target=self._process_install_queue, daemon=True)
+        self.install_worker_thread.start()
+
+    def _process_install_queue(self):
+        """后台处理安装任务队列"""
+        while self.install_worker_running:
+            try:
+                apk_path = self.install_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            try:
+                self._install_single_apk(apk_path)
+            finally:
+                self.install_queue.task_done()
+
+    def _install_single_apk(self, apk_path: str):
+        """逐个执行APK安装任务"""
+        apk_name = Path(apk_path).name
+        self.root.after(0, lambda: self.status_label.configure(text=f"正在安装：{apk_name}"))
+
+        try:
+            status, devices = adb_manager.get_connected_devices()
+            if status != DeviceStatus.CONNECTED or not devices:
+                self.root.after(0, lambda: self.show_message("错误", f"{apk_name} 安装已取消，设备连接已断开", "error"))
+                return
+
+            device_id = devices[0] if len(devices) == 1 else None
+
+            success, message = adb_manager.install_apk(apk_path, device_id)
+            if success:
+                self.root.after(0, lambda: self.show_message("成功", f"{apk_name} 安装完成：{message}", "info"))
+            else:
+                self.root.after(0, lambda: self.show_message("安装失败", f"{apk_name} 安装失败：{message}", "error"))
+        except Exception as e:
+            error_msg = f"{apk_name} 安装过程中出现异常: {str(e)}"
+            self.root.after(0, lambda: self.show_message("错误", error_msg, "error"))
+        finally:
+            self.root.after(0, self._refresh_idle_status_text)
+
+    def _refresh_idle_status_text(self):
+        """根据队列状态刷新提示文本"""
+        if self.install_queue.empty():
+            self.status_label.configure(text="请拖拽APK文件到窗体")
+        else:
+            self.status_label.configure(text="安装队列处理中，请稍候...")
+
+    def enqueue_install_tasks(self, apk_paths):
+        """将APK路径列表加入安装队列"""
+        if not apk_paths:
+            return
+
+        for apk_path in apk_paths:
+            self.install_queue.put(apk_path)
+
+        task_count = len(apk_paths)
+        self.root.after(0, lambda: self.status_label.configure(text=f"已加入{task_count}个安装任务，等待执行..."))
     
     def start_status_monitoring(self):
         """启动设备状态监控线程"""
@@ -280,18 +346,35 @@ class AndroidInstallerApp:
     
     def on_file_drop(self, event):
         """处理文件拖拽事件"""
-        files = self.root.tk.splitlist(event.data)
-        
-        if not files:
+        raw_files = self.root.tk.splitlist(event.data)
+
+        if not raw_files:
             return
-        
-        file_path = files[0]  # 只处理第一个文件
-        
-        # 验证是否为APK文件
-        if not self.is_valid_apk(file_path):
-            self.show_message("错误", "请拖拽有效的APK文件！", "error")
+
+        normalized_files = []
+        for raw_path in raw_files:
+            path = raw_path.strip()
+            if path.startswith("{") and path.endswith("}"):
+                path = path[1:-1]
+            path = path.strip('"')
+            normalized_files.append(path)
+
+        valid_apks = []
+        invalid_paths = []
+
+        for file_path in normalized_files:
+            if self.is_valid_apk(file_path):
+                valid_apks.append(file_path)
+            else:
+                invalid_paths.append(file_path)
+
+        if invalid_paths:
+            invalid_names = "\n".join(Path(p).name for p in invalid_paths)
+            self.show_message("错误", f"以下文件不是有效的APK，将不会加入队列：\n{invalid_names}", "error")
+
+        if not valid_apks:
             return
-        
+
         # 检查设备连接状态
         if self.current_status != DeviceStatus.CONNECTED:
             if self.current_status == DeviceStatus.ADB_ERROR:
@@ -299,9 +382,8 @@ class AndroidInstallerApp:
             else:
                 self.show_message("错误", "未检测到连接的Android设备", "error")
             return
-        
-        # 在新线程中执行安装，避免阻塞UI
-        threading.Thread(target=self.install_apk_async, args=(file_path,), daemon=True).start()
+
+        self.enqueue_install_tasks(valid_apks)
     
     def is_valid_apk(self, file_path: str) -> bool:
         """验证是否为有效的APK文件"""
@@ -315,39 +397,6 @@ class AndroidInstallerApp:
         # 可以添加更多验证逻辑，比如检查文件头等
         return True
     
-    def install_apk_async(self, apk_path: str):
-        """异步安装APK文件"""
-        # 在主线程中显示安装中状态
-        self.root.after(0, lambda: self.status_label.configure(text="正在安装APK..."))
-        
-        try:
-            # 获取连接的设备
-            status, devices = adb_manager.get_connected_devices()
-            
-            if status != DeviceStatus.CONNECTED or not devices:
-                self.root.after(0, lambda: self.show_message("错误", "设备连接已断开", "error"))
-                return
-            
-            # 如果有多个设备，使用第一个
-            device_id = devices[0] if len(devices) == 1 else None
-            
-            # 执行安装
-            success, message = adb_manager.install_apk(apk_path, device_id)
-            
-            # 在主线程中显示结果
-            if success:
-                self.root.after(0, lambda: self.show_message("成功", message, "info"))
-            else:
-                self.root.after(0, lambda: self.show_message("安装失败", message, "error"))
-                
-        except Exception as e:
-            error_msg = f"安装过程中出现异常: {str(e)}"
-            self.root.after(0, lambda: self.show_message("错误", error_msg, "error"))
-        
-        finally:
-            # 恢复原始提示文本
-            self.root.after(0, lambda: self.status_label.configure(text="请拖拽APK文件到窗体"))
-    
     def show_message(self, title: str, message: str, msg_type: str = "info"):
         """显示消息对话框"""
         if msg_type == "error":
@@ -360,6 +409,7 @@ class AndroidInstallerApp:
     def on_closing(self):
         """窗口关闭事件处理"""
         self.status_check_running = False
+        self.install_worker_running = False
         self.root.quit()
         self.root.destroy()
     
