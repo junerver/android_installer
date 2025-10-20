@@ -58,14 +58,16 @@ class AndroidInstallerReleaser:
         self.exe_name = "android_installer.exe"
         self.zip_name = "android_installer.zip"
         
-        logger.info(f"项目根目录: {self.project_root}")
-        logger.info(f"源码目录: {self.src_dir}")
-        logger.info(f"主脚本: {self.main_script}")
-        logger.info(f"Platform-tools目录: {self.platform_tools_dir}")
-        logger.info(f"项目名称: {self.project_name}")
-        logger.info(f"项目版本: {self.project_version}")
-        logger.info(f"作者: {self.project_author}")
-        logger.info(f"应用图标: {self.icon_path}")
+        logger.info(
+            f"项目根目录: {self.project_root}\n"
+            f"源码目录: {self.src_dir}\n"
+            f"主脚本: {self.main_script}\n"
+            f"Platform-tools目录: {self.platform_tools_dir}\n"
+            f"项目名称: {self.project_name}\n"
+            f"项目版本: {self.project_version}\n"
+            f"作者: {self.project_author}\n"
+            f"应用图标: {self.icon_path}"
+        )
 
     def _load_project_metadata(self) -> dict:
         """读取pyproject.toml中的项目信息"""
